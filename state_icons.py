@@ -20,6 +20,10 @@ TOKENS = {
     "idle": "state_idle_line",
     "unknown": "state_unknown_line",
 }
+SPACE_TOKENS = {
+    status: token.replace("state_", "space_", 1)
+    for status, token in TOKENS.items()
+}
 LEGACY_TOKENS = ("state_icon_custom", "state_line_custom")
 DEFAULT_FRAMES = ("⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇", "⠋")
 DEFAULT_ICONS = {
@@ -112,13 +116,16 @@ def agents() -> list[tuple[str, str, str]]:
     return found
 
 
-def workspace_labels() -> dict[str, str]:
+def workspaces() -> list[tuple[str, str, str]]:
     data = herdr("workspace", "list")
-    return {
-        item["workspace_id"]: item["label"]
-        for item in data.get("result", {}).get("workspaces", [])
-        if isinstance(item.get("workspace_id"), str) and isinstance(item.get("label"), str)
-    }
+    found = []
+    for workspace in data.get("result", {}).get("workspaces", []):
+        workspace_id = workspace.get("workspace_id")
+        label = workspace.get("label")
+        status = workspace.get("agent_status")
+        if all(isinstance(value, str) for value in (workspace_id, label, status)):
+            found.append((workspace_id, label, status))
+    return found
 
 
 def resolve_status(
@@ -148,6 +155,22 @@ def report(source: str, pane: str, line: str | None, status: str | None = None) 
 
     active = TOKENS.get(status or "")
     for token in TOKENS.values():
+        if line is not None and token == active:
+            args += ["--token", f"{token}={line}"]
+        else:
+            args += ["--clear-token", token]
+    herdr(*args)
+
+
+def report_workspace(
+    source: str,
+    workspace: str,
+    line: str | None,
+    status: str | None = None,
+) -> None:
+    args = ["workspace", "report-metadata", workspace, "--source", source]
+    active = SPACE_TOKENS.get(status or "")
+    for token in SPACE_TOKENS.values():
         if line is not None and token == active:
             args += ["--token", f"{token}={line}"]
         else:
@@ -187,10 +210,12 @@ def animate(source: str, settings: Settings) -> int:
     stop_file = state_dir() / "animator.stop"
     pid_file.write_text(str(os.getpid()))
     stop_file.unlink(missing_ok=True)
-    previous: dict[str, str] = {}
-    shown: dict[str, str] = {}
-    done_until: dict[str, float] = {}
-    labels = workspace_labels()
+    pane_previous: dict[str, str] = {}
+    pane_shown: dict[str, str] = {}
+    pane_done_until: dict[str, float] = {}
+    workspace_previous: dict[str, str] = {}
+    workspace_shown: dict[str, str] = {}
+    workspace_done_until: dict[str, float] = {}
     frame = 0
 
     def exit_cleanly(*_: object) -> None:
@@ -200,35 +225,62 @@ def animate(source: str, settings: Settings) -> int:
     try:
         while not stop_file.exists():
             now = time.monotonic()
-            current = agents()
-            live = {pane for pane, _, _ in current}
+            current_workspaces = workspaces()
+            labels = {workspace: label for workspace, label, _ in current_workspaces}
+            current_agents = agents()
+            live_panes = {pane for pane, _, _ in current_agents}
+            live_workspaces = {workspace for workspace, _, _ in current_workspaces}
             keep_running = False
 
-            for pane, status, workspace_id in current:
+            for pane, status, workspace_id in current_agents:
                 display_status, deadline = resolve_status(
                     status,
-                    previous.get(pane),
-                    done_until.get(pane, 0.0),
+                    pane_previous.get(pane),
+                    pane_done_until.get(pane, 0.0),
                     now,
                     settings.done_hold_seconds,
                 )
-                previous[pane] = status
+                pane_previous[pane] = status
                 if deadline:
-                    done_until[pane] = deadline
+                    pane_done_until[pane] = deadline
                 else:
-                    done_until.pop(pane, None)
-                glyph = settings.glyph(display_status, frame)
-                line = compose_line(glyph, labels.get(workspace_id, ""))
-                if shown.get(pane) != line:
+                    pane_done_until.pop(pane, None)
+                line = compose_line(settings.glyph(display_status, frame), labels.get(workspace_id, ""))
+                if pane_shown.get(pane) != line:
                     report(source, pane, line, display_status)
-                    shown[pane] = line
-                keep_running |= display_status == "working" or pane in done_until
+                    pane_shown[pane] = line
+                keep_running |= display_status == "working" or pane in pane_done_until
 
-            for pane in shown.keys() - live:
+            for pane in pane_shown.keys() - live_panes:
                 report(source, pane, None)
-                shown.pop(pane, None)
-                previous.pop(pane, None)
-                done_until.pop(pane, None)
+                pane_shown.pop(pane, None)
+                pane_previous.pop(pane, None)
+                pane_done_until.pop(pane, None)
+
+            for workspace, label, status in current_workspaces:
+                display_status, deadline = resolve_status(
+                    status,
+                    workspace_previous.get(workspace),
+                    workspace_done_until.get(workspace, 0.0),
+                    now,
+                    settings.done_hold_seconds,
+                )
+                workspace_previous[workspace] = status
+                if deadline:
+                    workspace_done_until[workspace] = deadline
+                else:
+                    workspace_done_until.pop(workspace, None)
+                line = compose_line(settings.glyph(display_status, frame), label)
+                if workspace_shown.get(workspace) != line:
+                    report_workspace(source, workspace, line, display_status)
+                    workspace_shown[workspace] = line
+                keep_running |= display_status == "working" or workspace in workspace_done_until
+
+            for workspace in workspace_shown.keys() - live_workspaces:
+                report_workspace(source, workspace, None)
+                workspace_shown.pop(workspace, None)
+                workspace_previous.pop(workspace, None)
+                workspace_done_until.pop(workspace, None)
 
             if not keep_running:
                 break
@@ -247,6 +299,8 @@ def stop(source: str) -> None:
         os.kill(int(pid_file.read_text().strip()), signal.SIGTERM)
     for pane, _, _ in agents():
         report(source, pane, None)
+    for workspace, _, _ in workspaces():
+        report_workspace(source, workspace, None)
 
 
 def main() -> int:

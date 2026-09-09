@@ -49,6 +49,34 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.done_hold_seconds, 6.0)
 
 
+class WorkspaceTests(unittest.TestCase):
+    def test_reads_workspace_label_and_status(self) -> None:
+        with patch("state_icons.herdr") as herdr:
+            herdr.return_value = {
+                "result": {
+                    "workspaces": [
+                        {"workspace_id": "w1", "label": "Home", "agent_status": "working"}
+                    ]
+                }
+            }
+            self.assertEqual(state_icons.workspaces(), [("w1", "Home", "working")])
+
+    def test_reports_only_active_workspace_state_token(self) -> None:
+        with patch("state_icons.herdr") as herdr:
+            state_icons.report_workspace("plugin:test", "w1", "󰝦 Home", "idle")
+
+        args = herdr.call_args.args
+        self.assertIn("space_idle_line=󰝦 Home", args)
+        for token in (
+            "space_working_line",
+            "space_done_line",
+            "space_blocked_line",
+            "space_unknown_line",
+        ):
+            index = args.index(token)
+            self.assertEqual(args[index - 1], "--clear-token")
+
+
 class LifecycleTests(unittest.TestCase):
     def test_holds_done_after_working_then_expires(self) -> None:
         status, deadline = state_icons.resolve_status("idle", "working", 0.0, 10.0, 6.0)
