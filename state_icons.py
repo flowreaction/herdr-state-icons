@@ -91,7 +91,7 @@ def herdr(*args: str) -> dict:
         return {}
 
 
-def agents() -> list[tuple[str, str, str, str]]:
+def agents() -> list[tuple[str, str, str]]:
     data = herdr("agent", "list")
     found = []
     for agent in data.get("result", {}).get("agents", []):
@@ -102,24 +102,17 @@ def agents() -> list[tuple[str, str, str, str]]:
         if isinstance(pane, str) and isinstance(status, str):
             tab_id = tab if isinstance(tab, str) else ""
             workspace_id = workspace if isinstance(workspace, str) else tab_id.partition(":")[0]
-            found.append((pane, status, workspace_id, tab_id))
+            found.append((pane, status, workspace_id))
     return found
 
 
-def location_labels() -> tuple[dict[str, str], dict[str, str]]:
-    workspace_data = herdr("workspace", "list")
-    tab_data = herdr("tab", "list")
-    workspaces = {
+def workspace_labels() -> dict[str, str]:
+    data = herdr("workspace", "list")
+    return {
         item["workspace_id"]: item["label"]
-        for item in workspace_data.get("result", {}).get("workspaces", [])
+        for item in data.get("result", {}).get("workspaces", [])
         if isinstance(item.get("workspace_id"), str) and isinstance(item.get("label"), str)
     }
-    tabs = {
-        item["tab_id"]: item["label"]
-        for item in tab_data.get("result", {}).get("tabs", [])
-        if isinstance(item.get("tab_id"), str) and isinstance(item.get("label"), str)
-    }
-    return workspaces, tabs
 
 
 def resolve_status(
@@ -138,8 +131,8 @@ def resolve_status(
     return status, 0.0
 
 
-def compose_line(glyph: str, workspace: str, tab: str) -> str:
-    return " ".join(part for part in (glyph, workspace, tab) if part)
+def compose_line(glyph: str, workspace: str) -> str:
+    return " ".join(part for part in (glyph, workspace) if part)
 
 
 def report(source: str, pane: str, line: str | None) -> None:
@@ -194,7 +187,7 @@ def animate(source: str, settings: Settings) -> int:
     previous: dict[str, str] = {}
     shown: dict[str, str] = {}
     done_until: dict[str, float] = {}
-    workspace_labels, tab_labels = location_labels()
+    labels = workspace_labels()
     frame = 0
 
     def exit_cleanly(*_: object) -> None:
@@ -205,10 +198,10 @@ def animate(source: str, settings: Settings) -> int:
         while not stop_file.exists():
             now = time.monotonic()
             current = agents()
-            live = {pane for pane, _, _, _ in current}
+            live = {pane for pane, _, _ in current}
             keep_running = False
 
-            for pane, status, workspace_id, tab_id in current:
+            for pane, status, workspace_id in current:
                 display_status, deadline = resolve_status(
                     status,
                     previous.get(pane),
@@ -222,11 +215,7 @@ def animate(source: str, settings: Settings) -> int:
                 else:
                     done_until.pop(pane, None)
                 glyph = settings.glyph(display_status, frame)
-                line = compose_line(
-                    glyph,
-                    workspace_labels.get(workspace_id, ""),
-                    tab_labels.get(tab_id, ""),
-                )
+                line = compose_line(glyph, labels.get(workspace_id, ""))
                 if shown.get(pane) != line:
                     report(source, pane, line)
                     shown[pane] = line
@@ -253,7 +242,7 @@ def stop(source: str) -> None:
     (state_dir() / "animator.stop").touch()
     if process_is_running(pid_file):
         os.kill(int(pid_file.read_text().strip()), signal.SIGTERM)
-    for pane, _, _, _ in agents():
+    for pane, _, _ in agents():
         report(source, pane, None)
 
 

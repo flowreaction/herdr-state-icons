@@ -58,8 +58,8 @@ class LifecycleTests(unittest.TestCase):
 
 
 class LineTests(unittest.TestCase):
-    def test_combines_icon_workspace_and_tab_without_separator(self) -> None:
-        self.assertEqual(state_icons.compose_line("󰝦", "Home", "3"), "󰝦 Home 3")
+    def test_combines_icon_and_workspace_without_separator(self) -> None:
+        self.assertEqual(state_icons.compose_line("󰝦", "Home"), "󰝦 Home")
 
     def test_derives_workspace_id_from_tab(self) -> None:
         with patch("state_icons.herdr") as herdr:
@@ -70,7 +70,7 @@ class LineTests(unittest.TestCase):
                     ]
                 }
             }
-            self.assertEqual(state_icons.agents(), [("w1:p1", "idle", "w1", "w1:t3")])
+            self.assertEqual(state_icons.agents(), [("w1:p1", "idle", "w1")])
 
 
 class MetadataTests(unittest.TestCase):
