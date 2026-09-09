@@ -1,0 +1,29 @@
+id = "flowreaction.state-icons"
+name = "State Icons"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Configurable Nerd Font lifecycle icons with an animated braille working indicator"
+platforms = ["macos", "linux"]
+
+[[startup]]
+command = ["python3", "state_icons.py"]
+
+[[events]]
+on = "pane.agent_detected"
+command = ["python3", "state_icons.py"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["python3", "state_icons.py"]
+
+[[actions]]
+id = "refresh"
+title = "State icons: refresh"
+contexts = ["global"]
+command = ["python3", "state_icons.py"]
+
+[[actions]]
+id = "stop"
+title = "State icons: stop and clear"
+contexts = ["global"]
+command = ["python3", "state_icons.py", "--stop"]

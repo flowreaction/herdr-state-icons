@@ -1,0 +1,11 @@
+[icons]
+working = ["⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"]
+done = "󰄬"
+blocked = "󰅖"
+idle = "󰒲"
+unknown = "󰋗"
+needs-input = "󰋗"
+
+[animation]
+frame-seconds = 0.15
+done-hold-seconds = 6.0
