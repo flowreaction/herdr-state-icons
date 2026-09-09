@@ -13,8 +13,14 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-TOKEN = "state_line_custom"
-LEGACY_TOKEN = "state_icon_custom"
+TOKENS = {
+    "working": "state_working_line",
+    "done": "state_done_line",
+    "blocked": "state_blocked_line",
+    "idle": "state_idle_line",
+    "unknown": "state_unknown_line",
+}
+LEGACY_TOKENS = ("state_icon_custom", "state_line_custom")
 DEFAULT_FRAMES = ("⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇", "⠋")
 DEFAULT_ICONS = {
     "done": "󰄬",
@@ -135,20 +141,17 @@ def compose_line(glyph: str, workspace: str) -> str:
     return " ".join(part for part in (glyph, workspace) if part)
 
 
-def report(source: str, pane: str, line: str | None) -> None:
-    args = [
-        "pane",
-        "report-metadata",
-        pane,
-        "--source",
-        source,
-        "--clear-token",
-        LEGACY_TOKEN,
-    ]
-    if line is None:
-        args += ["--clear-token", TOKEN]
-    else:
-        args += ["--token", f"{TOKEN}={line}"]
+def report(source: str, pane: str, line: str | None, status: str | None = None) -> None:
+    args = ["pane", "report-metadata", pane, "--source", source]
+    for token in LEGACY_TOKENS:
+        args += ["--clear-token", token]
+
+    active = TOKENS.get(status or "")
+    for token in TOKENS.values():
+        if line is not None and token == active:
+            args += ["--token", f"{token}={line}"]
+        else:
+            args += ["--clear-token", token]
     herdr(*args)
 
 
@@ -217,7 +220,7 @@ def animate(source: str, settings: Settings) -> int:
                 glyph = settings.glyph(display_status, frame)
                 line = compose_line(glyph, labels.get(workspace_id, ""))
                 if shown.get(pane) != line:
-                    report(source, pane, line)
+                    report(source, pane, line, display_status)
                     shown[pane] = line
                 keep_running |= display_status == "working" or pane in done_until
 

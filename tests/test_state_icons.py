@@ -75,37 +75,25 @@ class LineTests(unittest.TestCase):
 
 
 class MetadataTests(unittest.TestCase):
-    def test_reports_custom_state_token(self) -> None:
+    def test_reports_only_the_active_state_token(self) -> None:
         with patch("state_icons.herdr") as herdr:
-            state_icons.report("plugin:test", "pane-1", "󰄬")
+            state_icons.report("plugin:test", "pane-1", "󰄬 Home", "done")
 
-        herdr.assert_called_once_with(
-            "pane",
-            "report-metadata",
-            "pane-1",
-            "--source",
-            "plugin:test",
-            "--clear-token",
-            "state_icon_custom",
-            "--token",
-            "state_line_custom=󰄬",
-        )
+        args = herdr.call_args.args
+        self.assertIn("state_done_line=󰄬 Home", args)
+        self.assertNotIn("--token=state_working_line", args)
+        for token in ("state_working_line", "state_blocked_line", "state_idle_line", "state_unknown_line"):
+            index = args.index(token)
+            self.assertEqual(args[index - 1], "--clear-token")
 
-    def test_clears_custom_state_token(self) -> None:
+    def test_clears_current_and_legacy_tokens(self) -> None:
         with patch("state_icons.herdr") as herdr:
             state_icons.report("plugin:test", "pane-1", None)
 
-        herdr.assert_called_once_with(
-            "pane",
-            "report-metadata",
-            "pane-1",
-            "--source",
-            "plugin:test",
-            "--clear-token",
-            "state_icon_custom",
-            "--clear-token",
-            "state_line_custom",
-        )
+        args = herdr.call_args.args
+        for token in (*state_icons.LEGACY_TOKENS, *state_icons.TOKENS.values()):
+            index = args.index(token)
+            self.assertEqual(args[index - 1], "--clear-token")
 
 
 if __name__ == "__main__":
