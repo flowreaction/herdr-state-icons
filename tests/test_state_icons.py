@@ -14,6 +14,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.glyph("working", 8), "⣷")
         self.assertEqual(settings.glyph("done", 0), "󰄬")
         self.assertEqual(settings.glyph("blocked", 0), "󰅖")
+        self.assertEqual(settings.glyph("idle", 0), "󰝦")
         self.assertEqual(settings.glyph("missing", 0), "󰋗")
 
     def test_loads_custom_icons_and_animation(self) -> None:
@@ -56,6 +57,22 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual((status, deadline), ("idle", 0.0))
 
 
+class LineTests(unittest.TestCase):
+    def test_combines_icon_workspace_and_tab_without_separator(self) -> None:
+        self.assertEqual(state_icons.compose_line("󰝦", "Home", "3"), "󰝦 Home 3")
+
+    def test_derives_workspace_id_from_tab(self) -> None:
+        with patch("state_icons.herdr") as herdr:
+            herdr.return_value = {
+                "result": {
+                    "agents": [
+                        {"pane_id": "w1:p1", "agent_status": "idle", "tab_id": "w1:t3"}
+                    ]
+                }
+            }
+            self.assertEqual(state_icons.agents(), [("w1:p1", "idle", "w1", "w1:t3")])
+
+
 class MetadataTests(unittest.TestCase):
     def test_reports_custom_state_token(self) -> None:
         with patch("state_icons.herdr") as herdr:
@@ -67,8 +84,10 @@ class MetadataTests(unittest.TestCase):
             "pane-1",
             "--source",
             "plugin:test",
+            "--clear-token",
+            "state_icon_custom",
             "--token",
-            "state_icon_custom=󰄬",
+            "state_line_custom=󰄬",
         )
 
     def test_clears_custom_state_token(self) -> None:
@@ -83,6 +102,8 @@ class MetadataTests(unittest.TestCase):
             "plugin:test",
             "--clear-token",
             "state_icon_custom",
+            "--clear-token",
+            "state_line_custom",
         )
 
 

@@ -2,7 +2,7 @@
 working = ["⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"]
 done = "󰄬"
 blocked = "󰅖"
-idle = "󰒲"
+idle = "󰝦"
 unknown = "󰋗"
 needs-input = "󰋗"
 
