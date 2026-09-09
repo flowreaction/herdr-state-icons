@@ -15,7 +15,7 @@ from pathlib import Path
 
 TOKEN = "state_line_custom"
 LEGACY_TOKEN = "state_icon_custom"
-DEFAULT_FRAMES = ("⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾")
+DEFAULT_FRAMES = ("⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇", "⠋")
 DEFAULT_ICONS = {
     "done": "󰄬",
     "blocked": "󰅖",

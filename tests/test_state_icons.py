@@ -10,8 +10,9 @@ class SettingsTests(unittest.TestCase):
     def test_defaults_use_braille_and_nerd_font_glyphs(self) -> None:
         settings = state_icons.Settings()
 
-        self.assertEqual(settings.glyph("working", 0), "⣷")
-        self.assertEqual(settings.glyph("working", 8), "⣷")
+        self.assertEqual(settings.glyph("working", 0), "⠙")
+        self.assertEqual(settings.glyph("working", 8), "⠙")
+        self.assertTrue(all((ord(frame) - 0x2800).bit_count() == 3 for frame in settings.frames))
         self.assertEqual(settings.glyph("done", 0), "󰄬")
         self.assertEqual(settings.glyph("blocked", 0), "󰅖")
         self.assertEqual(settings.glyph("idle", 0), "󰝦")
