@@ -76,10 +76,10 @@ class WorkspaceTests(unittest.TestCase):
             index = args.index(token)
             self.assertEqual(args[index - 1], "--clear-token")
 
-    def test_unknown_workspace_line_has_no_icon(self) -> None:
+    def test_unknown_workspace_line_has_blank_icon(self) -> None:
         self.assertEqual(
             state_icons.compose_workspace_line(state_icons.Settings(), "unknown", 0, "Home"),
-            "Home",
+            "⠀ Home",
         )
 
 

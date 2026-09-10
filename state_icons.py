@@ -25,6 +25,7 @@ SPACE_TOKENS = {
     for status, token in TOKENS.items()
 }
 LEGACY_TOKENS = ("state_icon_custom", "state_line_custom")
+BLANK_ICON = "⠀"
 DEFAULT_FRAMES = ("⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇", "⠋")
 DEFAULT_ICONS = {
     "done": "󰄬",
@@ -149,7 +150,7 @@ def compose_line(glyph: str, workspace: str) -> str:
 
 
 def compose_workspace_line(settings: Settings, status: str, frame: int, label: str) -> str:
-    glyph = "" if status == "unknown" else settings.glyph(status, frame)
+    glyph = BLANK_ICON if status == "unknown" else settings.glyph(status, frame)
     return compose_line(glyph, label)
 
 
