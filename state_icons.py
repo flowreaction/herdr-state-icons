@@ -148,6 +148,15 @@ def compose_line(glyph: str, workspace: str) -> str:
     return " ".join(part for part in (glyph, workspace) if part)
 
 
+def compose_workspace_line(settings: Settings, status: str, frame: int, label: str) -> str:
+    glyph = "" if status == "unknown" else settings.glyph(status, frame)
+    return compose_line(glyph, label)
+
+
+def frame_delay(started_at: float, now: float, interval: float) -> float:
+    return max(0.0, interval - (now - started_at))
+
+
 def report(source: str, pane: str, line: str | None, status: str | None = None) -> None:
     args = ["pane", "report-metadata", pane, "--source", source]
     for token in LEGACY_TOKENS:
@@ -224,7 +233,8 @@ def animate(source: str, settings: Settings) -> int:
     signal.signal(signal.SIGTERM, exit_cleanly)
     try:
         while not stop_file.exists():
-            now = time.monotonic()
+            frame_started = time.monotonic()
+            now = frame_started
             current_workspaces = workspaces()
             labels = {workspace: label for workspace, label, _ in current_workspaces}
             current_agents = agents()
@@ -270,7 +280,7 @@ def animate(source: str, settings: Settings) -> int:
                     workspace_done_until[workspace] = deadline
                 else:
                     workspace_done_until.pop(workspace, None)
-                line = compose_line(settings.glyph(display_status, frame), label)
+                line = compose_workspace_line(settings, display_status, frame, label)
                 if workspace_shown.get(workspace) != line:
                     report_workspace(source, workspace, line, display_status)
                     workspace_shown[workspace] = line
@@ -285,7 +295,7 @@ def animate(source: str, settings: Settings) -> int:
             if not keep_running:
                 break
             frame += 1
-            time.sleep(settings.frame_seconds)
+            time.sleep(frame_delay(frame_started, time.monotonic(), settings.frame_seconds))
     finally:
         pid_file.unlink(missing_ok=True)
         stop_file.unlink(missing_ok=True)

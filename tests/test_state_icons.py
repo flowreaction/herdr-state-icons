@@ -76,8 +76,18 @@ class WorkspaceTests(unittest.TestCase):
             index = args.index(token)
             self.assertEqual(args[index - 1], "--clear-token")
 
+    def test_unknown_workspace_line_has_no_icon(self) -> None:
+        self.assertEqual(
+            state_icons.compose_workspace_line(state_icons.Settings(), "unknown", 0, "Home"),
+            "Home",
+        )
+
 
 class LifecycleTests(unittest.TestCase):
+    def test_frame_delay_compensates_for_processing_time(self) -> None:
+        self.assertAlmostEqual(state_icons.frame_delay(10.0, 10.04, 0.15), 0.11)
+        self.assertEqual(state_icons.frame_delay(10.0, 10.2, 0.15), 0.0)
+
     def test_holds_done_after_working_then_expires(self) -> None:
         status, deadline = state_icons.resolve_status("idle", "working", 0.0, 10.0, 6.0)
         self.assertEqual((status, deadline), ("done", 16.0))
