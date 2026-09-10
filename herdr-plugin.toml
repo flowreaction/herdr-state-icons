@@ -1,7 +1,7 @@
 id = "flowreaction.state-icons"
 name = "State Icons"
 version = "0.1.0"
-min_herdr_version = "0.9.0"
+min_herdr_version = "0.8.2"
 description = "Configurable Nerd Font lifecycle icons with an animated braille working indicator"
 platforms = ["macos", "linux"]
 
