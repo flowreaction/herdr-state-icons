@@ -2,13 +2,7 @@
 
 Animated, colorable lifecycle icons for HerdR's **Spaces** and **Agents** sidebar views.
 
-```text
-⠙ Home                  ⠀ markdown-cv
-  Herdr Store README        main clean
-
-⠙ Home 3
-  Herdr Store README
-```
+![Animated preview of HerdR State Icons in the Spaces and Agents sidebar views](assets/herdr-state-icons.gif)
 
 The plugin reports one state-specific sidebar token per agent and Space. HerdR's normal sidebar configuration controls each token's color and style.
 
