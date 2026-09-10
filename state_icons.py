@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import signal
@@ -12,6 +13,7 @@ import time
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TextIO
 
 TOKENS = {
     "working": "state_working_line",
@@ -195,6 +197,16 @@ def state_dir() -> Path:
     return directory
 
 
+def acquire_animator_lock() -> TextIO | None:
+    lock = (state_dir() / "animator.lock").open("w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock.close()
+        return None
+    return lock
+
+
 def process_is_running(pid_file: Path) -> bool:
     try:
         os.kill(int(pid_file.read_text().strip()), 0)
@@ -216,6 +228,10 @@ def spawn_animator() -> None:
 
 
 def animate(source: str, settings: Settings) -> int:
+    lock = acquire_animator_lock()
+    if lock is None:
+        return 0
+
     pid_file = state_dir() / "animator.pid"
     stop_file = state_dir() / "animator.stop"
     pid_file.write_text(str(os.getpid()))
@@ -300,6 +316,7 @@ def animate(source: str, settings: Settings) -> int:
     finally:
         pid_file.unlink(missing_ok=True)
         stop_file.unlink(missing_ok=True)
+        lock.close()
     return 0
 
 

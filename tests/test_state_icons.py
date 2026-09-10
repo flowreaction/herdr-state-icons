@@ -84,6 +84,16 @@ class WorkspaceTests(unittest.TestCase):
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_animator_lock_allows_only_one_owner(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="tmp_rovodev_state_icons_") as directory:
+            with patch.dict("os.environ", {"HERDR_PLUGIN_STATE_DIR": directory}):
+                first = state_icons.acquire_animator_lock()
+                second = state_icons.acquire_animator_lock()
+
+            self.assertIsNotNone(first)
+            self.assertIsNone(second)
+            first.close()
+
     def test_frame_delay_compensates_for_processing_time(self) -> None:
         self.assertAlmostEqual(state_icons.frame_delay(10.0, 10.04, 0.15), 0.11)
         self.assertEqual(state_icons.frame_delay(10.0, 10.2, 0.15), 0.0)
